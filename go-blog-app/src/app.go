@@ -16,13 +16,13 @@ import (
 )
 
 type Blog struct {
-	title string `bson:title`
+	title string `bson:"title" json:"title"`
 
-	image_url string `bson:image_url`
+	image_url string `bson:image_url json:"image_url"`
 
-	description string `bson : description`
+	description string `bson : description json:"description"`
 
-	contact_detail string `bson: contact_detail`
+	contact_detail string `bson: contact_detail json:"contact_detail"`
 }
 
 func blogHandler(res http.ResponseWriter, r *http.Request) {
@@ -41,11 +41,6 @@ func delete(res http.ResponseWriter, req *http.Request) {
 	t, _ := template.ParseFiles("../views/delete.htm")
 	t.Execute(res, nil)
 }
-func update(res http.ResponseWriter, req *http.Request) {
-	//	p := Blog{title: "check out your favourite blogs"}
-	t, _ := template.ParseFiles("../views/updated.htm")
-	t.Execute(res, nil)
-}
 func createdBlog(res http.ResponseWriter, req *http.Request) {
 
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
@@ -56,10 +51,10 @@ func createdBlog(res http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 
 	insertResult, err := collection.InsertOne(context.TODO(), bson.M{
-		"title":          req.Form["title"],
-		"image_url":      req.Form["image_url"],
-		"description":    req.Form["description"],
-		"contact_detail": req.Form["contact_detail"],
+		"title":          req.Form["$title"],
+		"image_url":      req.Form["$image_url"],
+		"description":    req.Form["$description"],
+		"contact_detail": req.Form["$contact_detail"],
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -79,17 +74,18 @@ func updateBlog(res http.ResponseWriter, req *http.Request) {
 
 	collection := client.Database("blog").Collection("blogs")
 
-	filter := bson.D{{"title", req.Form["$title"]}}
+	filter := bson.M{{ "title" , req.Form["$title"] }}
 
 	req.ParseForm()
 
 	update := bson.M{
 		"$set": bson.M{
-			"image_url": req.Form["$image_url"],
-			"description": req.Form["$description"],
-			"contact_detail":req.Form["$contact_detail"],
+			"image_url":      req.Form["$image_url"],
+			"description":    req.Form["$description"],
+			"contact_detail": req.Form["$contact_detail"],
 		},
 	}
+	
 	updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		log.Fatal(err)
@@ -146,7 +142,7 @@ func findBlogs(res http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("title is", elem.title, "description is ", elem.description)
+		//	fmt.Println("title is", elem.title, "description is ", elem.description)
 		results = append(results, &elem)
 	}
 
@@ -155,19 +151,23 @@ func findBlogs(res http.ResponseWriter, req *http.Request) {
 	}
 
 	cur.Close(context.TODO())
-	var b, c Blog
-	b = Blog{title: "dehd", description: "skdji", contact_detail: "djj", image_url: "fjksjf"}
-	c = Blog{title: "dehd", description: "srkiewjridji", contact_detail: "djj", image_url: "fjksjf"}
 
-	var c1 []*Blog
-	c1 = append(c1, &b)
-	c1 = append(c1, &c)
-
+	var c1=struct{
+		result[] Blog 
+	}{
+		result:results
+	}	
 	t, _ := template.ParseFiles("../views/find.htm")
 
 	t1 := t.Lookup("find.htm")
 
 	t1.Execute(res, c1)
+}
+
+func UpdateYourBlog(res http.ResponseWriter, req *http.Request) {
+	//	p := Blog{title: "check out your favourite blogs"}
+	t, _ := template.ParseFiles("../views/update.htm")
+	t.Execute(res, nil)
 }
 func main() {
 
@@ -197,7 +197,7 @@ func main() {
 
 	http.HandleFunc("/deleted", deleteBlog)
 
-	http.HandleFunc("/update", update)
+	http.HandleFunc("/update", UpdateYourBlog)
 
 	http.HandleFunc("/updated", updateBlog)
 
